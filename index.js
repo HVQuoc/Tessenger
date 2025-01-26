@@ -29,6 +29,20 @@ app.get("/", (req, res) => {
   res.json("ok");
 });
 
+async function getUserDataFromRequest(req) {
+  return new Promise((resolve, reject) => {
+    const token = req.cookies?.token;
+    if (token) {
+      jwt.verify(token, jwtSecret, {}, (err, userData) => {
+        if (err) throw err;
+        resolve(userData);
+      });
+    } else {
+      reject("no token");
+    }
+  });
+}
+
 app.post("/login", async (req, res) => {
   const { username, password } = req.body;
   const foundUser = await User.findOne({ username });
@@ -91,6 +105,19 @@ app.get("/profile", (req, res) => {
   }
 });
 
+app.get("/messages/:userId", async (req, res) => {
+  const { userId } = req.params;
+  const userData = await getUserDataFromRequest(req);
+  const requestUserId = userData.userId;
+  // console.log("user ids:", { userId, requestUserId });
+  const messages = await Message.find({
+    sender: { $in: [userId, requestUserId] },
+    recipient: { $in: [userId, requestUserId] },
+  }).sort({ createdAt: 1 });
+
+  res.json(messages);
+});
+
 const server = app.listen(4000);
 
 // add socket server
@@ -126,11 +153,11 @@ wss.on("connection", (connection, req) => {
     const { recipient, text } = messageData.message;
     if (recipient && text) {
       // save message to database
-      // const messageDoc = await Message.create({
-      //   sender: connection.userId,
-      //   recipient,
-      //   text,
-      // });
+      const messageDoc = await Message.create({
+        sender: connection.userId,
+        recipient,
+        text,
+      });
 
       // send message to recipient
       [...wss.clients]
@@ -139,23 +166,12 @@ wss.on("connection", (connection, req) => {
           JSON.stringify({
             text,
             sender: connection.userId,
-            recipient
+            recipient,
+            _id: messageDoc._id,
           })
         );
-      // .forEach((c) =>
-      //   c.send(
-      //     JSON.stringify({
-      //       text,
-      //       sender: connection.userId,
-      //       recipient,
-      //       id: messageDoc._id,
-      //     })
-      //   )
-      // );
     }
   });
-
-  // console.log([...wss.clients].map(c => c.username))
 
   // send all active clients to all connected one
   [...wss.clients].forEach((client) => {
