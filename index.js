@@ -23,6 +23,7 @@ app.use(express.json());
 app.use(cookieParser());
 
 const User = require("./models/User");
+const Message = require("./models/Message");
 
 app.get("/", (req, res) => {
   res.json("ok");
@@ -110,23 +111,61 @@ wss.on("connection", (connection, req) => {
       if (token) {
         jwt.verify(token, jwtSecret, {}, (err, userData) => {
           if (err) throw err;
-          const {userId, username} = userData;
+          const { userId, username } = userData;
           connection.userId = userId;
           connection.username = username;
-        })
+        });
       }
     }
   }
 
+  // listening to the message event
+  connection.on("message", async (message) => {
+    // console.log("message event", message.toString())
+    const messageData = JSON.parse(message.toString());
+    const { recipient, text } = messageData.message;
+    if (recipient && text) {
+      // save message to database
+      // const messageDoc = await Message.create({
+      //   sender: connection.userId,
+      //   recipient,
+      //   text,
+      // });
+
+      // send message to recipient
+      [...wss.clients]
+        .find((c) => c.userId === recipient)
+        .send(
+          JSON.stringify({
+            text,
+            sender: connection.userId,
+            recipient
+          })
+        );
+      // .forEach((c) =>
+      //   c.send(
+      //     JSON.stringify({
+      //       text,
+      //       sender: connection.userId,
+      //       recipient,
+      //       id: messageDoc._id,
+      //     })
+      //   )
+      // );
+    }
+  });
+
   // console.log([...wss.clients].map(c => c.username))
 
   // send all active clients to all connected one
-  [...wss.clients].forEach(client => {
-    client.send(JSON.stringify(
-      {
-        online: [...wss.clients].map(c => ({userId: c.userId, username: c.username}))
-      }
-    ))
-  })
-
+  [...wss.clients].forEach((client) => {
+    client.send(
+      JSON.stringify({
+        online: [...wss.clients].map((c) => ({
+          userId: c.userId,
+          username: c.username,
+        })),
+      })
+    );
+  });
 });
