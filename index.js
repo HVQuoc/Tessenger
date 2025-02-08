@@ -118,6 +118,11 @@ app.get("/messages/:userId", async (req, res) => {
   res.json(messages);
 });
 
+app.get("/people", async (req, res) => {
+  const users = await User.find({}, { _id: 1, username: 1 });
+  res.json(users);
+});
+
 const server = app.listen(4000);
 
 // add socket server
@@ -160,9 +165,13 @@ wss.on("connection", (connection, req) => {
       });
 
       // send message to recipient
-      [...wss.clients]
-        .find((c) => c.userId === recipient)
-        .send(
+      const onlineRecipient = [...wss.clients].find(
+        (c) => c.userId === recipient
+      );
+      // [...wss.clients]
+      //   .find((c) => c.userId === recipient)
+      if (onlineRecipient)
+        onlineRecipient.send(
           JSON.stringify({
             text,
             sender: connection.userId,
