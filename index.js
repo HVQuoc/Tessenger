@@ -132,6 +132,38 @@ wss.on("connection", (connection, req) => {
   // console.log("connected", req.headers)
   // connection.send('hello')
 
+  function notifyAboutOnlinePeople() {
+    // send all active clients to all connected one
+    // console.log("connection array length:", [...wss.clients].length);
+    [...wss.clients].forEach((client) => {
+      client.send(
+        JSON.stringify({
+          online: [...wss.clients].map((c) => ({
+            userId: c.userId,
+            username: c.username,
+          })),
+        })
+      );
+    });
+  }
+
+  // set ping interval
+  connection.isAlive = true;
+  connection.timer = setInterval(() => {
+    connection.ping();
+    connection.deathTimer = setTimeout(() => {
+      clearInterval(connection.timer)
+      connection.terminate();
+      notifyAboutOnlinePeople();
+      console.log("dead");
+    }, 2000);
+  }, 15000);
+
+  connection.on("pong", () => {
+    console.log("pong!", connection.userId);
+    clearTimeout(connection.deathTimer);
+  });
+
   // grab the information of the connected client
   const cookies = req.headers.cookie;
   if (cookies) {
@@ -182,15 +214,5 @@ wss.on("connection", (connection, req) => {
     }
   });
 
-  // send all active clients to all connected one
-  [...wss.clients].forEach((client) => {
-    client.send(
-      JSON.stringify({
-        online: [...wss.clients].map((c) => ({
-          userId: c.userId,
-          username: c.username,
-        })),
-      })
-    );
-  });
+  notifyAboutOnlinePeople();
 });
