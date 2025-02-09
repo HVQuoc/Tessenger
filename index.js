@@ -167,12 +167,12 @@ wss.on("connection", (connection, req) => {
       clearInterval(connection.timer);
       connection.terminate();
       notifyAboutOnlinePeople();
-      console.log("dead");
+      // console.log("dead");
     }, 2000);
   }, 15000);
 
   connection.on("pong", () => {
-    console.log("pong!", connection.userId);
+    // console.log("pong!", connection.userId);
     clearTimeout(connection.deathTimer);
   });
 
