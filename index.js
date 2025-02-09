@@ -60,7 +60,9 @@ app.post("/login", async (req, res) => {
         }
       );
     } else {
-      res.status(401).json({message: "Bad credentials: invalid login information"});
+      res
+        .status(401)
+        .json({ message: "Bad credentials: invalid login information" });
     }
   } else {
     res.status(404).json({ message: "Not found username" });
@@ -68,15 +70,17 @@ app.post("/login", async (req, res) => {
 });
 
 app.post("/logout", (req, res) => {
-  res.clearCookie("token").json("logged out.")
-})
+  res.clearCookie("token").json("logged out.");
+});
 
 app.post("/register", async (req, res) => {
   const { username, password } = req.body;
   const foundUser = await User.findOne({ username });
   if (foundUser) {
-    res.status(409).json({message: "This username is already be registered with us."})
-    return 
+    res
+      .status(409)
+      .json({ message: "This username is already be registered with us." });
+    return;
   }
 
   try {
@@ -146,7 +150,7 @@ wss.on("connection", (connection, req) => {
     [...wss.clients].forEach((client) => {
       client.send(
         JSON.stringify({
-          online: [...wss.clients].map((c) => ({  
+          online: [...wss.clients].map((c) => ({
             userId: c.userId,
             username: c.username,
           })),
@@ -160,7 +164,7 @@ wss.on("connection", (connection, req) => {
   connection.timer = setInterval(() => {
     connection.ping();
     connection.deathTimer = setTimeout(() => {
-      clearInterval(connection.timer)
+      clearInterval(connection.timer);
       connection.terminate();
       notifyAboutOnlinePeople();
       console.log("dead");
