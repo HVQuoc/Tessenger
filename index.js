@@ -54,8 +54,9 @@ app.post("/login", async (req, res) => {
         jwtSecret,
         {},
         (err, token) => {
-          res.cookie("token", token, {sameSite: "none", secure: true}).json({
+          res.cookie("token", token, { sameSite: "none", secure: true }).json({
             id: foundUser._id,
+            token,
           });
         }
       );
@@ -70,7 +71,9 @@ app.post("/login", async (req, res) => {
 });
 
 app.post("/logout", (req, res) => {
-  res.cookie("token", "", {sameSite: "none", secure: true}).json("logged out.");
+  res
+    .cookie("token", "", { sameSite: "none", secure: true })
+    .json("logged out.");
 });
 
 app.post("/register", async (req, res) => {
@@ -108,11 +111,11 @@ app.post("/register", async (req, res) => {
 app.use((req, res, next) => {
   const token = req.cookies?.token;
   if (!token || token === "") {
-    res.status(401).json({message: "Unauthorized: no token"})
-    return
+    res.status(401).json({ message: "Unauthorized: no token" });
+    return;
   }
-  next()
-})
+  next();
+});
 
 app.get("/profile", (req, res) => {
   const token = req.cookies?.token;
@@ -159,10 +162,12 @@ wss.on("connection", (connection, req) => {
     [...wss.clients].forEach((client) => {
       client.send(
         JSON.stringify({
-          online: [...wss.clients].map((c) => ({
-            userId: c.userId,
-            username: c.username,
-          })),
+          online: [...wss.clients]
+            .filter((c) => !!c.userId)
+            .map((c) => ({
+              userId: c.userId,
+              username: c.username,
+            })),
         })
       );
     });
