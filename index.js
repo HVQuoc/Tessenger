@@ -70,7 +70,7 @@ app.post("/login", async (req, res) => {
 });
 
 app.post("/logout", (req, res) => {
-  res.clearCookie("token").json("logged out.");
+  res.cookie("token", "", {sameSite: "none", secure: true}).json("logged out.");
 });
 
 app.post("/register", async (req, res) => {
@@ -104,6 +104,15 @@ app.post("/register", async (req, res) => {
     res.status(500).json("error");
   }
 });
+
+app.use((req, res, next) => {
+  const token = req.cookies?.token;
+  if (!token || token === "") {
+    res.status(401).json({message: "Unauthorized: no token"})
+    return
+  }
+  next()
+})
 
 app.get("/profile", (req, res) => {
   const token = req.cookies?.token;
